@@ -7,7 +7,7 @@ import streamlit as st
 
 from openai import OpenAI
 
-from config import UPSTREAM_API_KEY
+from config import UPSTAGE_API_KEY
 
 
 @st.cache_resource(show_spinner=True)
@@ -40,7 +40,7 @@ def build_index_from_folder(folder_path: str, _client: OpenAI):
 
 @st.cache_data(show_spinner=False)
 def extract_text_from_pdf(file_bytes: bytes):
-    api_key = UPSTREAM_API_KEY
+    api_key = UPSTAGE_API_KEY
     url = "https://api.upstage.ai/v1/document-digitization"
     headers = {"Authorization": f"Bearer {api_key}"}
     files = {"document": ("document.pdf", file_bytes, "application/pdf")}
