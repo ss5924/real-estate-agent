@@ -1,7 +1,6 @@
 import streamlit as st
 from openai import OpenAI
 import logging
-import time
 
 from config import DATA_DIRECTORY, OPENAI_API_KEY
 from prompts import SYSTEM_PROMPT
@@ -45,5 +44,5 @@ if query := st.chat_input("질문을 입력해 주세요."):
         index=index,
         chunks=chunks,
         metadatas=metadatas,
-        session_file=session_file
+        session_file=session_file,
     )

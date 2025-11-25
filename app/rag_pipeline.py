@@ -1,17 +1,13 @@
-import base64
 import glob
-import io
-import json
 import os
-from datetime import datetime, timedelta
-
 import faiss
 import numpy as np
-import pandas as pd
 import requests
 import streamlit as st
-from PIL import Image
+
 from openai import OpenAI
+
+from config import UPSTREAM_API_KEY
 
 
 @st.cache_resource(show_spinner=True)
@@ -44,7 +40,7 @@ def build_index_from_folder(folder_path: str, _client: OpenAI):
 
 @st.cache_data(show_spinner=False)
 def extract_text_from_pdf(file_bytes: bytes):
-    api_key = "up_3Q55AJgytJeBuO4GZmR3OXSLjkhMy"
+    api_key = UPSTREAM_API_KEY
     url = "https://api.upstage.ai/v1/document-digitization"
     headers = {"Authorization": f"Bearer {api_key}"}
     files = {"document": ("document.pdf", file_bytes, "application/pdf")}

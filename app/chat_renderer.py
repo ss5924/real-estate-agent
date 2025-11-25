@@ -1,7 +1,6 @@
 import streamlit as st
 import json
 import os
-import pandas as pd
 import logging
 
 logger = logging.getLogger(__name__)

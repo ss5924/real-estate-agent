@@ -1,10 +1,9 @@
 import json
-from datetime import datetime
 import numpy as np
 import requests
 from openai import OpenAI
 
-from config import NEWS_API_KEY
+from config import NEWS_API_KEY, KOREAN_LAW_OC
 from prompts import (
     CLASSIFY_PROMPT_TEMPLATE,
     PLAN_PROMPT_TEMPLATE,
@@ -34,7 +33,7 @@ def search_korean_law(
 ):
     base_url = "http://www.law.go.kr/DRF/lawSearch.do"
     params = {
-        "OC": "shsha9292",
+        "OC": KOREAN_LAW_OC,
         "target": "expc",
         "type": "JSON",
         "query": query,
