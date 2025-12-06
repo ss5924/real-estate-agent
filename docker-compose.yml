@@ -6,9 +6,11 @@ services:
     image: real-estate-agent:latest
     container_name: real-estate-agent
     volumes:
-      - ./logs:/app/logs
-      - ./sessions:/app/sessions
-      - ./data:/app/data
+      - ./logs:/project/logs
+      - ./data:/project/data
+      - ./.env:/project/.env
+    env_file:
+      - .env
     ports:
       - "8501:8501"
     restart: unless-stopped

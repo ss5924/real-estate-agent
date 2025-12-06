@@ -5,9 +5,10 @@ import json
 from datetime import datetime
 import os
 
-from agent_core import get_response
-from chat_renderer import render_tool_data_for_display
-from session_manager import save_new_session_items
+from src.agent_core import get_response
+from components.chat_renderer import render_tool_data_for_display
+from src.session_manager import save_new_session_items
+from src.config import SESSION_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +33,9 @@ def handle_user_query(
     if not _session_file:
         # 새 세션 파일명 생성 (예: session_20251121_103030.jsonl)
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        os.makedirs("sessions", exist_ok=True)
-        filename = os.path.join("sessions", f"session_{ts}.jsonl")
-        _session_file = os.path.join("sessions", f"session_{ts}.jsonl")
+        os.makedirs(SESSION_DIR, exist_ok=True)
+        filename = os.path.join(SESSION_DIR, f"session_{ts}.jsonl")
+        _session_file = os.path.join(SESSION_DIR, f"session_{ts}.jsonl")
         st.session_state["session_file"] = filename
 
     with st.chat_message("user"):

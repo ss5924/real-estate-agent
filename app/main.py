@@ -2,13 +2,13 @@ import streamlit as st
 from openai import OpenAI
 import logging
 
-from config import DATA_DIRECTORY, OPENAI_API_KEY
-from prompts import SYSTEM_PROMPT
-from rag_pipeline import build_index_from_folder
-from ui_components import render_header, render_sidebar
-from session_manager import initialize_rag_index, load_session_from_file
-from chat_renderer import render_chat_history
-from response_handler import handle_user_query
+from src.config import RAG_DATA_DIR, OPENAI_API_KEY
+from src.prompts import SYSTEM_PROMPT
+from src.rag_pipeline import build_index_from_folder
+from components.ui_components import render_header, render_sidebar
+from src.session_manager import initialize_rag_index, load_session_from_file
+from components.chat_renderer import render_chat_history
+from src.response_handler import handle_user_query
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ render_header()
 render_sidebar()
 
 # RAG 인덱스 로드
-index, chunks, metadatas = initialize_rag_index(client, DATA_DIRECTORY)
+index, chunks, metadatas = initialize_rag_index(client, RAG_DATA_DIR)
 
 # 기존 대화 렌더링
 render_chat_history()

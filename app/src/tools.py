@@ -3,8 +3,8 @@ import numpy as np
 import requests
 from openai import OpenAI
 
-from config import NEWS_API_KEY, KOREAN_LAW_OC
-from prompts import (
+from src.config import NEWS_API_KEY, KOREAN_LAW_OC
+from src.prompts import (
     CLASSIFY_PROMPT_TEMPLATE,
     PLAN_PROMPT_TEMPLATE,
     JUDGE_PROMPT_TEMPLATE,
@@ -93,6 +93,8 @@ def plan_from_user_query(raw_query: str, client: OpenAI):
     )
     text = res.choices[0].message.content
     try:
+        if not text:
+            raise ValueError("Empty response from LLM")
         plan = json.loads(text)
     except Exception:
         plan = {"refine_question": raw_query, "intention": "일반질문", "tool_plan": []}
@@ -106,6 +108,8 @@ def check_policy_and_safety(user_query: str, answer: str, client: OpenAI):
     )
     text = res.choices[0].message.content
     try:
+        if not text:
+            raise ValueError("Empty response from LLM")
         data = json.loads(text)
     except Exception:
         data = {"is_safe": True, "reason": "", "final_answer": answer}
@@ -119,9 +123,10 @@ def classify_query_for_tools(query: str, client: OpenAI):
     )
     text = res.choices[0].message.content
     try:
+        if not text:
+            raise ValueError("Empty response from LLM")
         data = json.loads(text)
     except Exception:
-        # 파싱 실패 시 보수적으로 tools 사용
         data = {"need_tools": True, "reason": "JSON 파싱 실패, 기본값으로 tools 사용"}
     return data
 

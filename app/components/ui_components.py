@@ -1,7 +1,8 @@
 import streamlit as st
 import logging
 
-from session_manager import list_log_sessions
+from src.session_manager import list_log_sessions
+from src.config import SESSION_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ def render_header():
 
 def _render_session_list(current_session_file: str | None = None):
     """sessions 폴더 기준으로 대화 세션 목록 렌더링"""
-    sessions = list_log_sessions("sessions")
+    sessions = list_log_sessions(SESSION_DIR)
 
     st.markdown("#### 💬 대화 세션")
 

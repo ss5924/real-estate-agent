@@ -4,7 +4,8 @@ import streamlit as st
 import time
 import logging
 from datetime import datetime
-from rag_pipeline import build_index_from_folder
+from src.rag_pipeline import build_index_from_folder
+from src.config import SESSION_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -80,16 +81,16 @@ def make_json_safe(obj):
     return str(obj)
 
 
-def list_log_sessions(log_dir: str = "sessions"):
-    if not os.path.isdir(log_dir):
+def list_log_sessions(session_dir: str = SESSION_DIR):
+    if not os.path.isdir(session_dir):
         return []
 
     all_session_metadatas = []
-    for fname in os.listdir(log_dir):
+    for fname in os.listdir(session_dir):
         if not fname.endswith(".jsonl"):
             continue
 
-        fpath = os.path.join(log_dir, fname)
+        fpath = os.path.join(session_dir, fname)
         try:
             stat = os.stat(fpath)
             created_at = datetime.fromtimestamp(stat.st_mtime).strftime(

@@ -1,7 +1,7 @@
 import json
 from openai import OpenAI
 
-from tools import (
+from src.tools import (
     classify_query_for_tools,
     plan_from_user_query,
     get_news,
@@ -11,8 +11,8 @@ from tools import (
     llm_as_a_judge,
     check_policy_and_safety,
 )
-from agent_constants import TOOLS
-from agent_utils import init_session, call_llm, update_status
+from src.agent_constants import TOOLS
+from src.agent_utils import init_session, call_llm, update_status
 
 
 def get_response(
@@ -44,6 +44,8 @@ def get_response(
             client, session, query, directive, classify_result
         )
         return final_answer, tool_results, session, previous_session_size
+
+    assert session is not None
 
     session.append({"role": "user", "content": query})
 
@@ -279,9 +281,11 @@ def _run_judge_loop(
             },
             ensure_ascii=False,
         )
-
         try:
             judgement_str = llm_as_a_judge(judge_input_content, client)
+            if not judgement_str:
+                raise ValueError("Empty response from LLM")
+
             judgement = json.loads(judgement_str)
 
             key = f"llm_as_a_judge_attempt_{current_attempt}"
