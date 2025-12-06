@@ -318,10 +318,6 @@ def _run_tool_loop(
 
             tool_results[func_name] = result
 
-            if func_name == "get_user_summary":
-                # 개인정보 보호를 위해 get_user_summary 결과는 세션에 저장하지 않음
-                continue
-
             session.append(
                 {
                     "role": "tool",
