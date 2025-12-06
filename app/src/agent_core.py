@@ -1,5 +1,6 @@
 import json
 from openai import OpenAI
+from src.personal_memory import MemoryManager
 
 from src.tools import (
     classify_query_for_tools,
@@ -10,12 +11,15 @@ from src.tools import (
     search_korean_law,
     llm_as_a_judge,
     check_policy_and_safety,
+    get_user_summary,
 )
 from src.agent_constants import TOOLS
 from src.agent_utils import init_session, call_llm, update_status
+from src.prompts import MEMORY_PROMPT_TEMPLATE
 
 
 def get_response(
+    user_id: str,
     client: OpenAI,
     query: str,
     directive: str | None,
@@ -31,62 +35,139 @@ def get_response(
 
     previous_session_size = len(session)
 
-    # 세션 준비
+    # 세션 초기화 및 준비
     session = init_session(session, directive, continuous)
 
     # 질의 복잡도 분류
     classify_result = classify_query_for_tools(query, client)
     need_tools = classify_result.get("need_tools", False)
 
-    # 간단 질의면 즉시 답변 후 종료
+    final_answer = ""
+    tool_results = {}
+
+    # 간단한 질의 (Tools 불필요)
     if not need_tools:
         final_answer, tool_results, session = _handle_simple_query(
             client, session, query, directive, classify_result
         )
-        return final_answer, tool_results, session, previous_session_size
 
-    assert session is not None
+    # 복잡한 질의 (Tools + Planner + Judge)
+    else:
+        assert session is not None
+        session.append({"role": "user", "content": query})
 
-    session.append({"role": "user", "content": query})
+        # 플래너 단계
+        plan, tool_plan = _run_planner_phase(
+            client, query, session, status_callback=status_callback
+        )
 
-    # 플래너 단계
-    plan, tool_plan = _run_planner_phase(
-        client, query, session, status_callback=status_callback
-    )
+        tool_results = {
+            "_planner": plan,
+            "_classifier": classify_result,
+        }
 
-    tool_results: dict = {
-        "_planner": plan,
-        "_classifier": classify_result,
-    }
+        # 툴 실행 루프
+        draft_answer = _run_tool_loop(
+            user_id=user_id,
+            client=client,
+            session=session,
+            tool_plan=tool_plan,
+            tool_results=tool_results,
+            status_callback=status_callback,
+            index=index,
+            chunks=chunks,
+            metadatas=metadatas,
+        )
 
-    # 툴 호출 루프
-    draft_answer = _run_tool_loop(
-        client=client,
-        session=session,
-        tool_plan=tool_plan,
-        tool_results=tool_results,
-        status_callback=status_callback,
-        index=index,
-        chunks=chunks,
-        metadatas=metadatas,
-    )
+        # Judge 루프
+        final_answer, judge_logs = _run_judge_loop(
+            client=client,
+            query=query,
+            directive=directive,
+            session=session,
+            first_output=draft_answer,
+            tool_results=tool_results,
+            status_callback=status_callback,
+        )
+        tool_results.update(judge_logs)
 
-    # Judge 루프
-    final_answer, judge_logs = _run_judge_loop(
-        client=client,
-        query=query,
-        directive=directive,
-        session=session,
-        first_output=draft_answer,
-        tool_results=tool_results,
-        status_callback=status_callback,
-    )
+        update_status(status_callback, "✅ 답변 준비가 완료되었습니다.")
 
-    tool_results.update(judge_logs)
-
-    update_status(status_callback, "✅ 답변 준비가 완료되었습니다.")
+    # 장기 메모리 지능형 업데이트
+    if user_id:
+        try:
+            mm = MemoryManager()
+            _update_memory_if_necessary(client, session, user_id, mm)
+        except Exception as e:
+            # 메모리 저장이 메인 로직을 방해하면 안 되므로 로그만 남기고 패스
+            print(f"Memory update failed: {e}")
 
     return final_answer, tool_results, session, previous_session_size
+
+
+def _update_memory_if_necessary(
+    client: OpenAI, session: list, user_id: str, mm: MemoryManager
+):
+    recent_messages = []
+    # 뒤에서부터 10개 정도만 보되, user나 assistant의 '대화 내용'만 추려냅니다.
+    for msg in reversed(session):
+        if len(recent_messages) >= 6:  # 최대 6턴만 확인
+            break
+
+        # tool 메시지나 tool_calls는 메모리 요약에 굳이 필요 없으므로 제외 (API 에러 방지)
+        if msg["role"] in ["user", "assistant"] and msg.get("content"):
+            # 순서를 맞추기 위해 앞에 삽입 (reversed로 돌고 있으므로)
+            recent_messages.insert(0, {"role": msg["role"], "content": msg["content"]})
+
+    # 내용이 너무 없으면 중단
+    if not recent_messages:
+        return
+
+    # 시스템 프롬프트
+    system_msg = {
+        "role": "system",
+        "content": MEMORY_PROMPT_TEMPLATE,
+    }
+
+    # LLM 호출
+    messages = []
+    messages.append(system_msg)
+    messages.extend(recent_messages)
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            response_format={"type": "json_object"},
+        )
+        content = response.choices[0].message.content
+
+        if not content:
+            raise ValueError("Empty response from LLM")
+
+        result = json.loads(content)
+
+        should_update = result.get("update_needed", False)
+        new_memory = result.get("memory_content", "").strip()
+
+        if should_update and new_memory:
+            # 기존 메모리 로드
+            existing = mm.get_user_summary(user_id) or ""
+
+            if existing:
+                combined_memory = f"{existing}\n- {new_memory}"
+            else:
+                combined_memory = f"- {new_memory}"
+
+            # 저장
+            mm.save_user_summary(user_id, combined_memory)
+            print(f"📝 [Memory Updated] {new_memory}")
+        else:
+            # 업데이트 불필요
+            pass
+
+    except Exception as e:
+        print(f"Error during memory judgement: {e}")
 
 
 def _handle_simple_query(
@@ -135,6 +216,7 @@ def _run_planner_phase(client: OpenAI, query: str, session, status_callback=None
 
 
 def _execute_tool_call(
+    user_id: str,
     func_name: str,
     args: dict,
     client: OpenAI,
@@ -159,10 +241,13 @@ def _execute_tool_call(
         return search_korean_law(**args)
     if func_name == "check_policy_and_safety":
         return check_policy_and_safety(args["user_query"], args["answer"], client)
+    if func_name == "get_user_summary":
+        return get_user_summary(user_id=user_id)
     return {"error": f"알 수 없는 함수: {func_name}"}
 
 
 def _run_tool_loop(
+    user_id: str,
     client: OpenAI,
     session,
     tool_plan,
@@ -220,6 +305,7 @@ def _run_tool_loop(
 
             try:
                 result = _execute_tool_call(
+                    user_id,
                     func_name,
                     args,
                     client,
@@ -231,6 +317,10 @@ def _run_tool_loop(
                 result = {"error": str(e)}
 
             tool_results[func_name] = result
+
+            if func_name == "get_user_summary":
+                # 개인정보 보호를 위해 get_user_summary 결과는 세션에 저장하지 않음
+                continue
 
             session.append(
                 {

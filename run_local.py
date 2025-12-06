@@ -22,8 +22,6 @@ else:
 def start_streamlit():
     print("🚀 Streamlit 앱을 실행합니다...")
 
-    log_file = open("server_logs.txt", "w", encoding="utf-8")
-
     cmd = [
         sys.executable,
         "-m",
@@ -41,8 +39,8 @@ def start_streamlit():
     process = subprocess.Popen(
         cmd,
         cwd=APP_DIR,
-        stdout=None,  # log_file,
-        stderr=None,  # log_file,
+        stdout=None,
+        stderr=None,
         text=True,
     )
     print(f"✅ Streamlit 백그라운드 실행 중 (PID: {process.pid})")

@@ -7,6 +7,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 KOREAN_LAW_OC = os.getenv("KOREAN_LAW_OC")
 UPSTAGE_API_KEY = os.getenv("UPSTAGE_API_KEY")
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
 
 
 # app/src/config.py -> app/src -> app -> agent (ROOT)
@@ -18,3 +19,5 @@ SESSION_DIR = os.path.join(DATA_DIR, "sessions")
 ENV_PATH = os.path.join(BASE_DIR, ".env")
 APP_DIR = os.path.join(BASE_DIR, "app")
 RAG_DATA_DIR = os.path.join(DATA_DIR, "rag")
+
+DB_PATH = "users.db"

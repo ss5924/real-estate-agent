@@ -25,6 +25,10 @@ https://eulalia-nitramino-kristopher.ngrok-free.dev/
 ### 5. `check_policy_and_safety`
 - 정책·안전 검토 및 필요 시 답변 재작성
 
+### 6. `get_user_summary`
+- 사용자의 요약 정보를 조회
+- 과거 상담 이력을 통해 축적된 사용자의 장기 기억(선호 지역, 예산, 제약사항 등)을 조회
+
 ---
 
 ## 질문 처리 Flow
@@ -62,6 +66,9 @@ https://eulalia-nitramino-kristopher.ngrok-free.dev/
 
 #### (4) Policy/Safety 검토(비활성)
 - `check_policy_and_safety(query, answer)` 활용 가능 구조
+
+#### (5) 사용자의 장기 기억 저장
+- `_update_memory_if_necessary(...)` 사용자가 자신의 개인적 선호, 상황, 제약사항, 목표에 대해 새롭거나 구체적인 정보를 언급이 있다면, 해당 내용 저장
 
 ---
 

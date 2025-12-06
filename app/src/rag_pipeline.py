@@ -12,7 +12,7 @@ from src.config import UPSTAGE_API_KEY
 
 @st.cache_resource(show_spinner=True)
 def build_index_from_folder(folder_path: str, _client: OpenAI):
-    # 1. 파일 탐색 및 텍스트 청킹
+    # 파일 탐색 및 텍스트 청킹
     pdf_files = glob.glob(os.path.join(folder_path, "**", "*.pdf"), recursive=True)
     all_chunks = []
     metadatas = []
@@ -35,31 +35,31 @@ def build_index_from_folder(folder_path: str, _client: OpenAI):
             print(f"파일 처리 중 에러 발생 ({path}): {e}")
             continue
 
-    # [방어 코드] 청크가 하나도 없으면 여기서 종료 (빈값 리턴)
+    # 청크가 하나도 없으면 여기서 종료 (빈값 리턴)
     if not all_chunks:
         print("경고: 처리할 텍스트 청크가 없습니다.")
         return None, [], []
 
-    # 2. 임베딩 생성
+    # 임베딩 생성
     try:
         # 리스트 컴프리헨션으로 임베딩 생성
         embeddings_list = [get_embedding(ch, _client) for ch in all_chunks]
 
-        # [중요] FAISS 호환성을 위한 Numpy 변환 및 메모리 정렬
+        # FAISS 호환성을 위한 Numpy 변환 및 메모리 정렬
         embeddings = np.array(embeddings_list, dtype="float32")
         embeddings = np.ascontiguousarray(embeddings)
     except Exception as e:
         print(f"임베딩 생성 중 에러: {e}")
         return None, [], []
 
-    # 3. FAISS 인덱스 생성
+    # FAISS 인덱스 생성
     # 데이터가 있으면 차원(dimension)을 구함
     dim = embeddings.shape[1]
 
     # L2(유클리드 거리) 기반 인덱스 생성
     index = faiss.IndexFlatL2(dim)
 
-    # [수정] add_with_ids 대신 add 사용 (0부터 순차적 ID 자동 부여)
+    # 0부터 순차적 ID 자동 부여
     index.add(embeddings)  # type: ignore
 
     return index, all_chunks, metadatas

@@ -5,7 +5,6 @@ import time
 import logging
 from datetime import datetime
 from src.rag_pipeline import build_index_from_folder
-from src.config import SESSION_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +80,7 @@ def make_json_safe(obj):
     return str(obj)
 
 
-def list_log_sessions(session_dir: str = SESSION_DIR):
+def list_log_sessions(session_dir: str):
     if not os.path.isdir(session_dir):
         return []
 

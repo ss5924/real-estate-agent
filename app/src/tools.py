@@ -2,7 +2,9 @@ import json
 import numpy as np
 import requests
 from openai import OpenAI
+from typing import Optional
 
+from src.personal_memory import MemoryManager
 from src.config import NEWS_API_KEY, KOREAN_LAW_OC
 from src.prompts import (
     CLASSIFY_PROMPT_TEMPLATE,
@@ -70,7 +72,7 @@ def llm_as_a_judge(content, client: OpenAI):
         {"role": "user", "content": content},
     ]
     judge_response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         messages=judge_session,
     )
     return judge_response.choices[0].message.content
@@ -151,3 +153,9 @@ def search_vector_store(client: OpenAI, query, index, chunks, metadatas, top_k=3
 def get_embedding(text, client: OpenAI):
     res = client.embeddings.create(model="text-embedding-3-small", input=text)
     return np.array(res.data[0].embedding, dtype="float32")
+
+
+def get_user_summary(user_id: str) -> Optional[str]:
+    mm = MemoryManager()
+    summary = mm.get_user_summary(user_id)
+    return summary

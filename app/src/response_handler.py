@@ -4,6 +4,7 @@ import logging
 import json
 from datetime import datetime
 import os
+from openai import OpenAI
 
 from src.agent_core import get_response
 from components.chat_renderer import render_tool_data_for_display
@@ -24,18 +25,24 @@ TOOL_ICON_MAP = {
 
 
 def handle_user_query(
-    client, query, directive, index, chunks, metadatas, session_file: str | None
+    client: OpenAI,
+    query: str,
+    directive: str,
+    index,
+    chunks: list,
+    metadatas: list,
+    user_id: str,
+    session_file: str | None,
 ):
     # 사용자 메시지 버블
-
     _session_file = session_file
 
     if not _session_file:
         # 새 세션 파일명 생성 (예: session_20251121_103030.jsonl)
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        os.makedirs(SESSION_DIR, exist_ok=True)
-        filename = os.path.join(SESSION_DIR, f"session_{ts}.jsonl")
-        _session_file = os.path.join(SESSION_DIR, f"session_{ts}.jsonl")
+        os.makedirs(os.path.join(SESSION_DIR, user_id), exist_ok=True)
+        filename = os.path.join(SESSION_DIR, user_id, f"session_{ts}.jsonl")
+        _session_file = os.path.join(SESSION_DIR, user_id, f"session_{ts}.jsonl")
         st.session_state["session_file"] = filename
 
     with st.chat_message("user"):
@@ -56,8 +63,11 @@ def handle_user_query(
 
         start_time = time.time()
 
+        user_id = st.session_state["user_id"]
+
         with st.spinner("💭 Thinking..."):
             reply, tool_results, new_session, previous_session_size = get_response(
+                user_id=user_id,
                 client=client,
                 query=query,
                 directive=directive,
@@ -68,7 +78,7 @@ def handle_user_query(
                 status_callback=status_callback,
             )
 
-        # 3. 결과 저장 및 출력
+        # 결과 저장 및 출력
         # 최신 세션 session_state에 저장
         st.session_state["session"] = new_session
         # 파일에 세션 히스토리 저장
@@ -76,7 +86,7 @@ def handle_user_query(
 
         elapsed = time.time() - start_time
 
-        # ⏱️ 처리 시간 표시
+        # 처리 시간 표시
         timer_placeholder.markdown(
             f"""
             <div style="

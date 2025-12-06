@@ -72,4 +72,18 @@ TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_user_summary",
+            "description": "사용자의 요약 정보를 조회합니다. 과거 상담 이력을 통해 축적된 사용자의 장기 기억(선호 지역, 예산, 제약사항 등)을 조회합니다.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "string", "description": "사용자 ID"},
+                },
+                "required": ["user_id"],
+            },
+        },
+    },
 ]

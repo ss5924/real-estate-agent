@@ -1,5 +1,6 @@
 import streamlit as st
 import logging
+import os
 
 from src.session_manager import list_log_sessions
 from src.config import SESSION_DIR
@@ -24,9 +25,14 @@ def render_header():
     )
 
 
-def _render_session_list(current_session_file: str | None = None):
+def _render_session_list(user_id: str, current_session_file: str | None = None):
     """sessions 폴더 기준으로 대화 세션 목록 렌더링"""
-    sessions = list_log_sessions(SESSION_DIR)
+
+    if not user_id:
+        st.caption("로그인 후 대화 세션이 표시됩니다.")
+        return
+
+    sessions = list_log_sessions(os.path.join(SESSION_DIR, user_id))
 
     st.markdown("#### 💬 대화 세션")
 
@@ -76,26 +82,24 @@ def _render_session_list(current_session_file: str | None = None):
         is_active = s["filepath"] == current_id
 
         title = s.get("title", "제목 없음")
-        # created_at = s.get("created_at", "")
-        # msg_count = s.get("message_count", 0)
 
         label = f"{title}\n"
 
-        # 🔹 활성 세션: primary 버튼 → 자동으로 다른 색/스타일 적용
+        # 🔹 활성 세션: primary 버튼
         # 🔹 비활성 세션: secondary 버튼
         if is_active:
             clicked = st.button(
                 label,
                 key=f"session_select_{s['filepath']}",
                 use_container_width=True,
-                type="primary",  # ✅ 현재 세션 강조
+                type="primary",
             )
         else:
             clicked = st.button(
                 label,
                 key=f"session_select_{s['filepath']}",
                 use_container_width=True,
-                type="secondary",  # 기본 스타일
+                type="secondary",
             )
 
         if clicked:
@@ -103,7 +107,10 @@ def _render_session_list(current_session_file: str | None = None):
             st.rerun()
 
 
-def render_sidebar(current_session_file: str | None = None):
+# cookie_manager를 인자로 받도록 변경
+def render_sidebar(
+    user_id: str, cookie_manager, current_session_file: str | None = None
+):
     with st.sidebar:
         st.markdown(
             """
@@ -134,23 +141,44 @@ def render_sidebar(current_session_file: str | None = None):
             unsafe_allow_html=True,
         )
 
-        # 🔄 새 상담 시작 버튼
+        if st.session_state.get("logged_in") and user_id:
+            st.info(f"👤 **{user_id}**님 로그인 중")
+
+            if st.button("로그아웃", use_container_width=True):
+                # 브라우저 쿠키 삭제 (키 이름: files_user_id)
+                cookie_manager.delete("files_user_id")
+
+                # 세션 스테이트 초기화
+                keys_to_remove = [
+                    "user_id",
+                    "logged_in",
+                    "session_file",
+                    "session",
+                    "remember",
+                ]
+                for k in keys_to_remove:
+                    st.session_state.pop(k, None)
+
+                # 화면 새로고침
+                st.rerun()
+
+        # 새 상담 시작 버튼
         new_session_btn = st.button("새 상담 시작하기", use_container_width=True)
         if new_session_btn:
             # 메모리 대화 초기화
             st.session_state["session"] = []
-            # 다음 발화부터 새 파일을 만들도록 기존 session_file 제거
+            # 다음부터 새 파일을 만들도록 기존 session_file 제거
             st.session_state.pop("session_file", None)
             st.rerun()
 
         st.divider()
 
-        # 💬 로그 폴더 기준 대화 세션 목록
-        _render_session_list(current_session_file)
+        # 로그 폴더 기준 대화 세션 목록
+        _render_session_list(user_id=user_id, current_session_file=current_session_file)
 
         st.divider()
 
-        # 📚 지식 베이스 상태
+        # 지식 베이스 상태
         st.markdown("#### 📚 지식 베이스 상태")
         if "index" in st.session_state and st.session_state.get("chunks"):
             num_chunks = len(st.session_state["chunks"])
@@ -162,7 +190,7 @@ def render_sidebar(current_session_file: str | None = None):
 
         st.divider()
 
-        # ℹ️ 에이전트 안내
+        # 에이전트 안내
         with st.expander("ℹ️ 에이전트 안내", expanded=True):
             st.markdown(
                 """

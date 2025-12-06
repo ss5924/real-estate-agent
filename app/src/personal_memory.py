@@ -1,55 +1,80 @@
 import sqlite3
+import logging
 import os
 from datetime import datetime
+from typing import Optional
+from src.config import DB_PATH
+from src.crypto_manager import CryptoManager
+
+logger = logging.getLogger(__name__)
+
 
 class MemoryManager:
-    def __init__(self, db_path="users.db"):
-        # app.py와 같은 폴더에 DB 파일 생성
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        self.db_path = os.path.join(base_dir, db_path)
-        self.init_db()
+    def __init__(self):
+        self.db_path = DB_PATH
+        self.crypto = CryptoManager()
+        self._init_db()
 
-    def init_db(self):
-        """DB 테이블이 없으면 생성"""
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
-        # user_id: 사용자 아이디
-        # summary: 사용자에 대한 요약 정보 (LLM이 만든 것)
-        # updated_at: 마지막 업데이트 시간
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS user_memory (
-                user_id TEXT PRIMARY KEY,
-                summary TEXT,
-                updated_at TEXT
-            )
-        ''')
-        conn.commit()
-        conn.close()
+    def _get_connection(self):
+        return sqlite3.connect(self.db_path)
 
-    def get_user_summary(self, user_id):
-        """사용자의 요약된 정보를 가져옴"""
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
-        c.execute("SELECT summary FROM user_memory WHERE user_id = ?", (user_id,))
-        result = c.fetchone()
-        conn.close()
-        
-        if result:
-            return result[0]
-        return None
+    def _init_db(self):
+        # DB 파일이 저장될 폴더가 없으면 생성
+        db_dir = os.path.dirname(self.db_path)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
 
-    def save_user_summary(self, user_id, new_summary):
-        """요약된 정보를 저장/업데이트"""
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
+        try:
+            with self._get_connection() as conn:
+                c = conn.cursor()
+                # user_id를 PK로 지정하여 유저당 무조건 1개의 Row만 존재하도록 강제
+                c.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS user_memory (
+                        user_id TEXT PRIMARY KEY,
+                        summary TEXT,
+                        updated_at TEXT
+                    )
+                """
+                )
+                conn.commit()
+        except sqlite3.Error as e:
+            print(f"DB 초기화 중 에러 발생: {e}")
+
+    def get_user_summary(self, user_id: str) -> Optional[str]:
+        try:
+            with self._get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    "SELECT summary FROM user_memory WHERE user_id = ?", (user_id,)
+                )
+                result = c.fetchone()
+
+                if result:
+                    return self.crypto.decrypt(result[0])
+                return None
+        except sqlite3.Error as e:
+            print(f"메모리 조회 실패 ({user_id}): {e}")
+            return None
+
+    def save_user_summary(self, user_id: str, new_summary: str):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        # 있으면 업데이트, 없으면 삽입 (UPSERT)
-        c.execute('''
-            INSERT OR REPLACE INTO user_memory (user_id, summary, updated_at)
-            VALUES (?, ?, ?)
-        ''', (user_id, new_summary, now))
-        
-        conn.commit()
-        conn.close()
-        print(f"💾 [Memory] {user_id}의 정보가 저장되었습니다.")
+
+        encrypted_summary = self.crypto.encrypt(new_summary)
+
+        try:
+            with self._get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    """
+                    INSERT OR REPLACE INTO user_memory (user_id, summary, updated_at)
+                    VALUES (?, ?, ?)
+                """,
+                    (user_id, encrypted_summary, now),
+                )
+                conn.commit()
+
+            print(f"[Memory] {user_id}의 장기 기억이 업데이트되었습니다.")
+
+        except sqlite3.Error as e:
+            print(f"메모리 저장 실패 ({user_id}): {e}")
