@@ -5,6 +5,31 @@ X
 
 ---
 
+**프로젝트 성격**
+
+- 기간: 3일
+- 성격: RAG와 에이전트 아키텍처를 활용해 부동산 초보자용 상담 봇을 구현해본 과제용 프로젝트
+- 상세: 저장소 내 pdf 파일 참조
+
+---
+
+## 기술 스택
+
+| Category               | Library / Tool      | Description                                                                 |
+| :--------------------- | :------------------ | :-------------------------------------------------------------------------- |
+| **Language** | **Python 3.13+** | LLM 에이전트 로직 구현 및 전체 시스템 통합 개발                             |
+| **LLM (Core)** | **GPT-4o** | 복잡한 추론, 최종 답변 생성       |
+| **LLM (Utility)** | **GPT-4o-mini** | Planner(계획), 난이도 분류, LLM Judge(평가) 수행을 통한 비용 최적화         |
+| **Embedding** | **OpenAI Embeddings**| `text-embedding-3-small` 모델을 사용하여 문서 청크(500 token) 벡터화        |
+| **OCR & Parsing** | **Upstage API** | PDF 원천 문서에서 고정밀 텍스트 및 구조 데이터 추출         |
+| **Vector DB** | **FAISS** | 임베딩된 문서의 고속 유사도 검색 및 RAG 파이프라인 구축                     |
+| **Database** | **SQLite** | 사용자 세션 정보 및 장기 기억(User Summary)의 경량화된 구조적 저장          |
+| **Security** | **Fernet (AES-128)**| 사용자 민감 정보(개인화 데이터) 보호를 위한 대칭키 기반 암호화 적용         |
+| **Web Framework** | **Streamlit** | 대화형 웹 인터페이스(UI) 구현              |
+| **External APIs** | **News / Law API** | 실시간 부동산 뉴스 및 국가법령정보센터(최신 법령/유권해석) 연동             |
+
+---
+
 ## 제공 도구(Tools)
 
 ### 1. `search_vector_store`
