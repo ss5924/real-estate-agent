@@ -1,15 +1,12 @@
 # 부동산 에이전트 시스템 개요
 
-## 접속 URL
-X
 
----
 
 **프로젝트 성격**
 
 - 기간: 3일
 - 성격: RAG와 에이전트 아키텍처를 활용해 부동산 초보자용 상담 봇을 구현해본 과제용 프로젝트
-- 상세: 저장소 내 pdf 파일 참조
+- 상세: [기획 및 아키텍처 구조 확인 바로가기 (PDF)](https://github.com/shshinbox/real-estate-agent/blob/main/%EB%B6%80%EB%8F%99%EC%82%B0%EC%B4%88%EB%B3%B4%EB%A5%BC_%EC%9C%84%ED%95%9C_%EB%B6%80%EB%8F%99%EC%82%B0_%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8_%EA%B5%AC%EC%B6%95_20251208_v1.0.pdf)
 
 ---
 
